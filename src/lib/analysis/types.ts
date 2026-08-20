@@ -17,6 +17,10 @@ export interface AnalysisRequest {
     annual_revenue: number;
     asking_price: number;
     client_relationships: number | null;
+    /** Unique-client concentration measures as 0-1 rates; null means unknown. */
+    largest_client_revenue_percentage: number | null;
+    top_5_client_revenue_percentage: number | null;
+    top_10_client_revenue_percentage: number | null;
     services: ServiceRequest[];
     fixed_operating_costs: number;
     staff_variable_costs: number;
@@ -67,6 +71,8 @@ export interface ScoreComponent {
   score: number;
   value: string;
   weighted_points: number;
+  display_weight?: number;
+  display_weighted_points?: number;
 }
 
 export interface QualityScore {
@@ -164,13 +170,19 @@ export interface AnalysisSuccess {
     unknowns: { field: string; effect: string }[];
   };
   english_analysis: {
+    /** Current sections produced by analysis_narrative.build_acquisition_analysis. */
+    overall_assessment?: string[];
+    strengths?: string[];
+    weaknesses_risks?: string[];
+    key_due_diligence_questions?: string[];
+    /** Backward-compatible aliases retained by the web interface. */
     summary: string;
     attractive_factors: string[];
     financial_concerns: string[];
-    transition_strengths: string[];
-    transition_concerns: string[];
+    transition_strengths?: string[];
+    transition_concerns?: string[];
     priority_due_diligence: string[];
-    scope_note: string;
+    scope_note?: string;
   };
   cash_flow_projections: YearResult[];
   service_categories: ServiceCategoryAnalysis[];

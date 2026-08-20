@@ -43,6 +43,10 @@ export interface FormState {
     askingPrice: string;
     clientRelationships: string;
     ownerHourlyValue: string;
+    /** Optional unique-client concentration measures, as percentages. Blank = unknown. */
+    largestClientPercent: string;
+    topFiveClientPercent: string;
+    topTenClientPercent: string;
   };
   services: ServiceRow[];
   costs: {
@@ -96,6 +100,9 @@ export function createInitialFormState(): FormState {
       askingPrice: "",
       clientRelationships: "",
       ownerHourlyValue: "",
+      largestClientPercent: "",
+      topFiveClientPercent: "",
+      topTenClientPercent: "",
     },
     services: SERVICE_CATEGORIES.map((category) => ({
       name: category.name,
@@ -157,6 +164,11 @@ export function num(value: string): number {
 
 export function optionalNum(value: string): number | null {
   return value.trim() === "" ? null : num(value);
+}
+
+/** Percentage entry to a 0-1 rate; blank stays null (Unknown), never 0. */
+export function optionalRate(value: string): number | null {
+  return value.trim() === "" ? null : num(value) / 100;
 }
 
 export function activeServices(state: FormState): ServiceRow[] {
@@ -221,11 +233,27 @@ function buildAssumptionRecords(state: FormState): AssumptionRecord[] {
   if (state.practice.clientRelationships.trim() === "") {
     records.push(
       record(
-        "Client relationships",
+        "Number of client relationships",
         "Unknown",
         "Unknown",
         "Revenue-per-client analysis is unavailable without a client count.",
       ),
+    );
+  }
+  for (const [label, value] of [
+    ["Largest single client share of revenue", state.practice.largestClientPercent],
+    ["Top 5 clients share of revenue", state.practice.topFiveClientPercent],
+    ["Top 10 clients share of revenue", state.practice.topTenClientPercent],
+  ] as const) {
+    records.push(
+      value.trim() === ""
+        ? record(
+            label,
+            "Unknown",
+            "Unknown",
+            "Client concentration was not provided, so this measure is excluded from scoring.",
+          )
+        : record(label, `${num(value)}%`, "User entered"),
     );
   }
   if (state.transition.keyStaffRetentionUnknown) {
@@ -258,6 +286,9 @@ export function toAnalysisRequest(state: FormState): AnalysisRequest {
       annual_revenue: num(state.practice.annualRevenue),
       asking_price: num(state.practice.askingPrice),
       client_relationships: optionalNum(state.practice.clientRelationships),
+      largest_client_revenue_percentage: optionalRate(state.practice.largestClientPercent),
+      top_5_client_revenue_percentage: optionalRate(state.practice.topFiveClientPercent),
+      top_10_client_revenue_percentage: optionalRate(state.practice.topTenClientPercent),
       services,
       fixed_operating_costs: num(state.costs.fixedOperatingCosts),
       staff_variable_costs: num(state.costs.staffVariableCosts),

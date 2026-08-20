@@ -1,4 +1,4 @@
-import { NumericField, SegmentedYesNo, WhyThisMatters } from "@/components/form/Fields";
+import { NumericField, SegmentedYesNo, ValueNote, WhyThisMatters } from "@/components/form/Fields";
 import { Callout, FieldGrid, SectionCard, StepIntro } from "./StepChrome";
 import { financingAllocationTotal, num, type FormState } from "@/lib/analysis/formState";
 import { money } from "@/lib/format";
@@ -41,6 +41,7 @@ export function StepFinancing({
         description="The equity you personally put into the deal on day one."
       >
         <NumericField
+          note={<ValueNote variant="default">$0 if left blank</ValueNote>}
           label="Buyer cash at closing"
           adornment="currency"
           placeholder="100,000"
@@ -63,12 +64,14 @@ export function StepFinancing({
         <FieldGrid>
           <NumericField
             label="Seller note principal"
+            note={<ValueNote variant="default">$0 if left blank</ValueNote>}
             adornment="currency"
             value={state.financing.sellerNoteAmount}
             onChange={(value) => update({ sellerNoteAmount: value })}
           />
           <NumericField
             label="Interest rate"
+            note={<ValueNote variant="suggested">example only — enter the actual rate</ValueNote>}
             adornment="percent"
             placeholder="6"
             value={state.financing.sellerNoteRate}
@@ -76,6 +79,7 @@ export function StepFinancing({
           />
           <NumericField
             label="Term"
+            note={<ValueNote variant="default">0 years if left blank</ValueNote>}
             suffix="yrs"
             placeholder="5"
             value={state.financing.sellerNoteYears}
@@ -92,12 +96,14 @@ export function StepFinancing({
         <FieldGrid>
           <NumericField
             label="Loan principal"
+            note={<ValueNote variant="default">$0 if left blank</ValueNote>}
             adornment="currency"
             value={state.financing.bankAmount}
             onChange={(value) => update({ bankAmount: value })}
           />
           <NumericField
             label="Interest rate"
+            note={<ValueNote variant="suggested">example only — enter the actual rate</ValueNote>}
             adornment="percent"
             placeholder="9"
             value={state.financing.bankRate}
@@ -105,6 +111,7 @@ export function StepFinancing({
           />
           <NumericField
             label="Term"
+            note={<ValueNote variant="default">0 years if left blank</ValueNote>}
             suffix="yrs"
             placeholder="10"
             value={state.financing.bankYears}
@@ -112,6 +119,7 @@ export function StepFinancing({
           />
           <NumericField
             label="Loan fees"
+            note={<ValueNote variant="default">$0 if left blank</ValueNote>}
             adornment="currency"
             value={state.financing.bankFees}
             onChange={(value) => update({ bankFees: value })}
@@ -132,12 +140,14 @@ export function StepFinancing({
         <FieldGrid>
           <NumericField
             label="Maximum earn-out"
+            note={<ValueNote variant="default">$0 if left blank</ValueNote>}
             adornment="currency"
             value={state.financing.earnoutAmount}
             onChange={(value) => update({ earnoutAmount: value })}
           />
           <NumericField
             label="Earn-out term"
+            note={<ValueNote variant="default">0 years if left blank</ValueNote>}
             suffix="yrs"
             value={state.financing.earnoutYears}
             onChange={(value) => update({ earnoutYears: value })}

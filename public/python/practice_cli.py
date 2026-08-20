@@ -6,6 +6,7 @@ from __future__ import annotations
 import math
 
 from acquisition_engine import *
+from analysis_narrative import build_acquisition_analysis
 
 def ask_float(prompt: str, *, default: float | None = None, minimum: float = 0) -> float:
     while True:
@@ -93,6 +94,18 @@ def ask_optional_unknown_float(
             return value
         except ValueError:
             print("Please enter a nonnegative number, or leave blank if unknown.")
+
+
+def ask_optional_unknown_percent(
+    prompt: str, records: list[AssumptionRecord], *, explanation: str = ""
+) -> float | None:
+    while True:
+        value = ask_optional_unknown_float(prompt, records, explanation=explanation)
+        if value is None or value <= 100:
+            return None if value is None else value / 100
+        records.pop()
+        explanation = ""
+        print("Percentage cannot exceed 100%.")
 
 
 def ask_optional_unknown_int(
@@ -322,6 +335,25 @@ def collect_inputs() -> tuple[
         explanation="Relationships are unique clients; service engagement counts may overlap.",
         default_source="Context-derived default",
     ))
+    print("\nActual client-revenue concentration (optional)")
+    print("Use unique client relationships and combine each client's revenue across all services.")
+    while True:
+        largest_client_share = ask_optional_unknown_percent(
+            "Largest single client as % of acquired-book revenue", records
+        )
+        top_5_share = ask_optional_unknown_percent(
+            "Top 5 clients as % of acquired-book revenue", records
+        )
+        top_10_share = ask_optional_unknown_percent(
+            "Top 10 clients as % of acquired-book revenue", records
+        )
+        known_concentration = [value for value in (
+            largest_client_share, top_5_share, top_10_share
+        ) if value is not None]
+        if all(left <= right for left, right in zip(
+                known_concentration, known_concentration[1:])):
+            break
+        print("Known values must satisfy largest client <= top 5 clients <= top 10 clients. Please re-enter this section.")
 
     print("\nService categories")
     print("Engagement counts may overlap across services and are not unique client counts.")
@@ -462,7 +494,7 @@ def collect_inputs() -> tuple[
         print("Analysis horizon must be a whole number from 3 to 10.")
     practice = Practice(
         revenue, price, clients, tuple(services), operating, staff, owner_hourly_value,
-        staff_variable_percentage,
+        staff_variable_percentage, largest_client_share, top_5_share, top_10_share,
     )
     if practice.annual_owner_hours is None:
         for index, record in enumerate(records):
@@ -514,6 +546,15 @@ def print_report(practice: Practice, financing: Financing,
     print(f"Capital-stack reconciliation   {money(allocated)} / {money(practice.asking_price)}")
     print(f"Allocation percentages         cash {financing.down_payment / practice.asking_price:.1%} | bank {financing.bank_loan / practice.asking_price:.1%} | seller {financing.seller_note / practice.asking_price:.1%} | contingent {financing.earnout_total / practice.asking_price:.1%}")
     print(f"Client relationships           {practice.clients if practice.clients is not None else 'Unknown'}")
+    print("Actual client concentration    "
+          f"largest {practice.largest_client_revenue_share:.1%}" if practice.largest_client_revenue_share is not None
+          else "Actual client concentration    largest Unknown")
+    print("                               "
+          f"top 5 {practice.top_5_client_revenue_share:.1%}" if practice.top_5_client_revenue_share is not None
+          else "                               top 5 Unknown")
+    print("                               "
+          f"top 10 {practice.top_10_client_revenue_share:.1%}" if practice.top_10_client_revenue_share is not None
+          else "                               top 10 Unknown")
     print("Base model scope               Existing acquired book only; no buyer-created growth")
     active_services = [service for service in practice.services if service.annual_revenue or service.engagements]
     print("\nSERVICE ANALYSIS")
@@ -737,9 +778,16 @@ def print_report(practice: Practice, financing: Financing,
     print(f"{'Component':<33} {'Weight':>8} {'Metric':>25} {'Score':>8} {'Points':>9}")
     for component in quality.components:
         print(f"{component.name:<33.33} {component.weight:>7.0f}% {component.value:>25.25} {component.score:>7.0f} {component.weighted_points:>9.1f}")
-    print("Scoring anchors (linear between endpoints): multiple 0.65x=100/1.35x=0; revenue/client")
-    print("$750=0/$2,500=100; revenue/hour $150=0/$400=100; residual margin -10%=0/20%=100;")
-    print("equity return 0%=0/50%=100; payback 3yr=100/10yr=0; largest service 20%=100/70%=0;")
+    print("Scoring anchors: purchase multiple uses a buyer-side piecewise curve from 0.70x=98,")
+    print("1.00x=70, 1.20x=50, 1.50x=20, and 2.00x=0. Revenue/client is a gentle contextual")
+    print("curve from $200=25, $625=50, $1,500=76, and $5,000=96. Service-mix diversification")
+    print("is contextual: largest service 25%=96, 50%=85, 70%=68, 90%=35, and 100%=15.")
+    print("Actual client concentration is separate and materially more important: largest client is 60%,")
+    print("top 5 is 25%, and top 10 is 15% of that factor. Known submeasures are normalized; unknown")
+    print("submeasures receive no score. Example full-data scores: 2%/10%/15%=100, 10%/30%/45%=78,")
+    print("20%/55%/75%=36, and 30%/70%/90%=13. The factor's base weight is 6% versus 2% for service mix.")
+    print("Revenue/hour $150=0/$400=100; residual margin -10%=0/20%=100;")
+    print("equity return 0%=0/50%=100; payback 3yr=100/10yr=0;")
     print("retention 75%=0/95%=100; workload 250=100/700=0 hours per $100k. Service quality is a")
     print("revenue-weighted blend of recurrence (25%), average fee (37.5%), and revenue/hour (37.5%);")
     print("recurring status alone cannot produce a high score. Low-fee/labor exposure uses $400/engagement")
@@ -775,70 +823,35 @@ def print_report(practice: Practice, financing: Financing,
     if data_quality.provisional:
         print("Status: PROVISIONAL — important inputs rely on disclosed analyzer defaults.")
 
-    print("\nACQUISITION ANALYSIS")
+    uncertainty_questions = tuple(
+        record.uncertainty_note for record in data_quality.uncertain_inputs
+        if record.uncertainty_note
+    )
+    narrative = build_acquisition_analysis(
+        practice, financing, primary, quality, transition, transition_quality,
+        overall_score, uncertainties=uncertainty_questions,
+    )
+    print("\nOVERALL ASSESSMENT")
     print("-" * 108)
-    if quality.strengths:
-        print("Attractive: " + "; ".join(quality.strengths) + ".")
+    for paragraph in narrative["overall_assessment"]:
+        print(paragraph)
+    print("\nSTRENGTHS")
+    print("-" * 108)
+    if narrative["strengths"]:
+        for item in narrative["strengths"]:
+            print(f"  - {item}")
     else:
-        print("Attractive: No scoring component is clearly strong based on the entered assumptions.")
-    if quality.concerns:
-        print("Concerning: " + "; ".join(quality.concerns) + ".")
+        print("  - No material strength is supported strongly enough by the entered information.")
+    print("\nWEAKNESSES / RISKS")
+    print("-" * 108)
+    if narrative["weaknesses_risks"]:
+        for item in narrative["weaknesses_risks"]:
+            print(f"  - {item}")
     else:
-        print("Concerning: No scoring component falls in the weakest range, though diligence is still required.")
-    if transition_quality.strengths:
-        print("Transition support: " + "; ".join(transition_quality.strengths) + ".")
-    if transition_quality.concerns:
-        print("Transition concerns: " + "; ".join(transition_quality.concerns) + ".")
-    if owner_hours_known:
-        retained_hours = sum(service.retained_owner_hours or 0 for service in primary.years[0].retained_services)
-        print(f"Economics: year 1 provides {money(primary.annual_cash_flow)} before target owner compensation and {money(primary.economic_profit)} of residual ownership profit after valuing {retained_hours:,.0f} retained owner hours at {money(practice.owner_hourly_value)}/hour.")
-    else:
-        print(f"Economics: year 1 provides {money(primary.annual_cash_flow)} before owner compensation. Residual ownership profit and labor-adjusted returns are unavailable because owner hours are unknown.")
-    recurring_share = summarize_services(practice).recurring_revenue / practice.annual_revenue
-    print(f"Service mix and retention: recurring services are {recurring_share:.1%} of revenue; practice-wide year-1 retention is {primary.retention_rate:.1%} and is applied proportionally across services. Engagement overlap means this is not a unique-client retention measure.")
-    transition_support_score = sum(
-        component.weighted_points for component in transition_quality.components[:6]
-    ) / sum(component.weight for component in transition_quality.components[:6]) * 100
-    if primary.retention_rate >= 0.90 and transition_support_score < 60:
-        print("Retention consistency warning: expected year-1 retention is very high, but objective transition support scores below 60. The retention assumption has not been changed; validate the gap.")
-    if primary.retention_rate >= 0.90 and transition.seller_commitment <= 2:
-        print("Retention consistency warning: very high expected retention conflicts with a weak seller-transition commitment rating.")
-    fixed_debt_service = primary.annual_bank_payment + primary.annual_debt_payment
-    financing_burden = (fixed_debt_service + primary.annual_earnout_payment) / primary.operating_cash_flow if primary.operating_cash_flow > 0 else math.inf
-    burden_text = f"{financing_burden:.1%} of year-1 operating cash flow" if math.isfinite(financing_burden) else "not measurable because operating cash flow is nonpositive"
-    fixed_share = (financing.bank_loan + financing.seller_note) / practice.asking_price
-    contingent_share = financing.earnout_total / practice.asking_price
-    if contingent_share >= 0.20:
-        risk_text = "Meaningful consideration is retention-contingent, so the seller shares some transfer risk."
-    elif fixed_share >= 0.60:
-        risk_text = "Most deferred consideration is fixed debt, placing substantial retention risk on the buyer."
-    else:
-        risk_text = "The structure provides limited retention-contingent downside protection."
-    print(f"Financing: fixed annual debt service is {money(fixed_debt_service)}; total year-1 acquisition payments consume {burden_text}. {risk_text}")
-    print(f"Fixed obligations are {fixed_share:.1%} of price and retention-contingent consideration is {contingent_share:.1%}; total acquisition payback is {format_recovery(primary.total_acquisition_payback_years, horizon)}.")
-    if primary.economic_profit is None:
-        price_view = "The asking price cannot be fully assessed against owner-labor-adjusted economics until reliable owner hours are obtained."
-    elif quality.score >= 70 and primary.economic_profit > 0:
-        price_view = "The asking price appears supportable under the entered assumptions, but only if retention, hours, and normalized costs are validated."
-    elif primary.economic_profit <= 0:
-        price_view = "The asking price is not supported by positive residual ownership profit under the entered assumptions."
-    else:
-        price_view = "The asking price has mixed support from the entered economics and should be negotiated or validated with stronger evidence."
-    print("Price: " + price_view)
-    print("Priority diligence:")
-    priority_items = quality.investigation_items[:2] + transition_quality.investigation_items[:2]
-    ordered_uncertainties = sorted(
-        data_quality.uncertain_inputs, key=lambda record: record.source != "Unknown"
-    )
-    default_items = tuple(
-        record.uncertainty_note for record in ordered_uncertainties if record.uncertainty_note
-    )
-    if not owner_hours_known:
-        priority_items = tuple(
-            item for item in priority_items if "owner hours" not in item.lower()
-        )
-    combined_items = list(dict.fromkeys(default_items + priority_items))[:4]
-    for item in combined_items:
+        print("  - No known weakness crosses the report's materiality threshold; unresolved diligence still matters.")
+    print("\nKEY DUE-DILIGENCE QUESTIONS")
+    print("-" * 108)
+    for item in narrative["key_due_diligence_questions"]:
         print(f"  - {item}")
 
 
@@ -855,4 +868,3 @@ if __name__ == "__main__":
         main()
     except (EOFError, KeyboardInterrupt):
         print("\nCancelled.")
-

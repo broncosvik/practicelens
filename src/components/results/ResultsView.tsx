@@ -199,6 +199,25 @@ export function ResultsView({
 }) {
   const { scores, analysis, english_analysis: narrative, financing, service_summary: summary } = result;
 
+  // The backend is authoritative for every sentence below; nothing is generated here.
+  const overallAssessment =
+    narrative.overall_assessment && narrative.overall_assessment.length > 0
+      ? narrative.overall_assessment
+      : [narrative.summary];
+  const strengths = narrative.strengths ?? narrative.attractive_factors;
+  const risks = narrative.weaknesses_risks ?? narrative.financial_concerns;
+  const dueDiligence = narrative.key_due_diligence_questions ?? narrative.priority_due_diligence;
+
+  const concentrationComponent = scores.financial_operational.components.find(
+    (component) => component.name === "Actual client concentration",
+  );
+  const concentrationKnown = Boolean(
+    concentrationComponent && concentrationComponent.value !== "Excluded",
+  );
+  const serviceMixComponent = scores.financial_operational.components.find(
+    (component) => component.name === "Service mix diversification",
+  );
+
   const cashFlowData = useMemo(
     () =>
       result.cash_flow_projections.map((year) => ({
@@ -267,7 +286,11 @@ export function ResultsView({
             tone="primary"
             large
           />
-          <p className="prose-report text-sm leading-relaxed sm:text-base">{narrative.summary}</p>
+          <div className="prose-report space-y-3 text-sm leading-relaxed sm:text-base">
+            {overallAssessment.map((paragraph) => (
+              <p key={paragraph}>{paragraph}</p>
+            ))}
+          </div>
         </div>
 
         <Separator />
@@ -452,12 +475,55 @@ export function ResultsView({
         </div>
       </Section>
 
+      {/* Client concentration — dependence on individual client relationships */}
+      <Section
+        id="client-concentration"
+        title="Client concentration"
+        description="Dependence on particular client relationships, measured across all services. This is not the same as service mix diversification."
+      >
+        {concentrationKnown && concentrationComponent ? (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <Metric
+              label="Concentration data supplied"
+              value={concentrationComponent.value}
+              hint="Largest single client, top 5, and top 10 shares of acquired-book revenue."
+            />
+            <Metric
+              label="Concentration score"
+              value={`${Math.round(concentrationComponent.score)} / 100`}
+              hint="Scored by the analyzer from the measures you provided."
+            />
+            <Metric
+              label="Weight in the financial score"
+              value={String(concentrationComponent.display_weight ?? concentrationComponent.weight)}
+              hint={`Contributed ${(concentrationComponent.display_weighted_points ?? concentrationComponent.weighted_points).toFixed(1)} points.`}
+            />
+          </div>
+        ) : (
+          <div className="print-block rounded-lg border border-border bg-surface p-4 text-sm leading-relaxed text-muted-foreground">
+            Client concentration not provided. The analyzer excluded it from scoring rather than
+            assuming a value — it is not treated as 0% or as low risk.
+          </div>
+        )}
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          Client concentration measures dependence on particular client relationships. Service mix
+          diversification, shown below, measures dependence on particular types of work. One client
+          may buy several services; all of that revenue belongs to the single relationship.
+        </p>
+      </Section>
+
       {/* Service mix */}
       <Section
         id="service-mix"
         title="Service mix analysis"
-        description="What the practice sells, how concentrated it is, and how each category carries into year one."
+        description="Dependence on particular types of services, and how each category carries into year one. This is not client concentration."
       >
+        {serviceMixComponent ? (
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            Analyzer service mix diversification: {serviceMixComponent.value} —{" "}
+            {Math.round(serviceMixComponent.score)} / 100.
+          </p>
+        ) : null}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Metric label="Recurring revenue" value={money(summary.recurring_revenue)} />
           <Metric label="Nonrecurring revenue" value={money(summary.nonrecurring_revenue)} />
@@ -617,24 +683,33 @@ export function ResultsView({
         description="The analyzer's written review of this opportunity."
         breakBefore
       >
-        <p className="prose-report border-l-2 border-primary pl-4 text-base leading-relaxed">
-          {narrative.summary}
-        </p>
+        <div className="prose-report space-y-3 border-l-2 border-primary pl-4 text-base leading-relaxed">
+          <h4 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Overall assessment
+          </h4>
+          {overallAssessment.map((paragraph) => (
+            <p key={paragraph}>{paragraph}</p>
+          ))}
+        </div>
 
         <div className="grid gap-6 md:grid-cols-2">
-          <PointList title="Major strengths" items={narrative.attractive_factors} tone="positive" />
-          <PointList title="Major concerns" items={narrative.financial_concerns} tone="negative" />
-          <PointList title="Transition strengths" items={narrative.transition_strengths} tone="positive" />
-          <PointList title="Transition concerns" items={narrative.transition_concerns} tone="negative" />
+          <PointList title="Strengths" items={strengths} tone="positive" />
+          <PointList title="Weaknesses / risks" items={risks} tone="negative" />
+          <PointList
+            title="Transition strengths"
+            items={narrative.transition_strengths ?? []}
+            tone="positive"
+          />
+          <PointList
+            title="Transition concerns"
+            items={narrative.transition_concerns ?? []}
+            tone="negative"
+          />
         </div>
 
         <Separator />
 
-        <PointList
-          title="Priority due diligence"
-          items={narrative.priority_due_diligence}
-          tone="neutral"
-        />
+        <PointList title="Key due-diligence questions" items={dueDiligence} tone="neutral" />
 
         <div className="grid gap-6 md:grid-cols-2">
           <PointList
@@ -649,9 +724,11 @@ export function ResultsView({
           />
         </div>
 
-        <div className="print-block rounded-lg border border-border bg-surface p-4 text-sm leading-relaxed text-muted-foreground">
-          {narrative.scope_note}
-        </div>
+        {narrative.scope_note ? (
+          <div className="print-block rounded-lg border border-border bg-surface p-4 text-sm leading-relaxed text-muted-foreground">
+            {narrative.scope_note}
+          </div>
+        ) : null}
       </Section>
 
       <p className="print-block text-xs leading-relaxed text-muted-foreground">

@@ -59,6 +59,22 @@ function validateStep(step: number, state: FormState): string[] {
     if (num(state.practice.askingPrice) <= 0) errors.push("Enter the asking price.");
     if (num(state.practice.ownerHourlyValue) <= 0)
       errors.push("Enter what an hour of your own time is worth.");
+    // Mirrors the backend's concentration validation so the user sees it before running.
+    const concentration = [
+      state.practice.largestClientPercent,
+      state.practice.topFiveClientPercent,
+      state.practice.topTenClientPercent,
+    ]
+      .filter((entry) => entry.trim() !== "")
+      .map(num);
+    if (concentration.some((value) => value < 0 || value > 100)) {
+      errors.push("Client concentration percentages must be between 0 and 100.");
+    }
+    if (concentration.some((value, index) => index > 0 && concentration[index - 1]! > value)) {
+      errors.push(
+        "Client concentration must not decrease: largest client ≤ top 5 clients ≤ top 10 clients.",
+      );
+    }
   }
   if (step === 1) {
     const services = activeServices(state);
