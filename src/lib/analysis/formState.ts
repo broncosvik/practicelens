@@ -43,6 +43,10 @@ export interface FormState {
     askingPrice: string;
     clientRelationships: string;
     ownerHourlyValue: string;
+    /** Optional unique-client concentration measures, as percentages. Blank = unknown. */
+    largestClientPercent: string;
+    topFiveClientPercent: string;
+    topTenClientPercent: string;
   };
   services: ServiceRow[];
   costs: {
