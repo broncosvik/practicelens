@@ -28,6 +28,47 @@ export function WhyThisMatters({ children, label = "Why this matters" }: { child
   );
 }
 
+/**
+ * Makes the status of a field's shown value unambiguous:
+ *  - "default"   the analyzer will actually use this value if you do nothing
+ *  - "derived"   an active default computed from something entered earlier
+ *  - "suggested" an example only; it is NOT used unless you enter it
+ *  - "optional"  blank stays Unknown; nothing is imputed
+ */
+export function ValueNote({
+  variant,
+  children,
+}: {
+  variant: "default" | "derived" | "suggested" | "optional";
+  children: ReactNode;
+}) {
+  const toneClass =
+    variant === "default" || variant === "derived"
+      ? "border-success/40 bg-success/10 text-foreground"
+      : variant === "suggested"
+        ? "border-border bg-surface text-muted-foreground"
+        : "border-border bg-muted text-muted-foreground";
+  const prefix =
+    variant === "default"
+      ? "Default"
+      : variant === "derived"
+        ? "Default"
+        : variant === "suggested"
+          ? "Example"
+          : "Optional";
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium leading-tight",
+        toneClass,
+      )}
+    >
+      <span className="font-semibold">{prefix}:</span>
+      <span className="font-normal">{children}</span>
+    </span>
+  );
+}
+
 export function FieldShell({
   label,
   htmlFor,
