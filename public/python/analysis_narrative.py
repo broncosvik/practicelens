@@ -142,10 +142,16 @@ def build_acquisition_analysis(
         if strong("Purchase price / revenue", 60) and not weak("Financing structure / risk") else
         "Practice quality does not by itself resolve concerns about price or acquisition obligations."
     )
+    # Only describe information as unresolved when it is genuinely unknown.
+    unresolved: list[str] = []
+    if practice.annual_owner_hours is None:
+        unresolved.append("owner workload")
+    if any(value is None for value in concentration_values):
+        unresolved.append("client concentration")
     confidence_note = (
-        " Important workload or client-concentration information remains unresolved, so the conclusion should be treated as provisional."
-        if practice.annual_owner_hours is None or any(value is None for value in concentration_values)
-        else ""
+        f" {' and '.join(unresolved).capitalize()} information remains unresolved,"
+        " so the conclusion should be treated as provisional."
+        if unresolved else ""
     )
     overall = [
         f"The combined score is {overall_score}/100. {practice_view} {deal_view}{confidence_note}",
