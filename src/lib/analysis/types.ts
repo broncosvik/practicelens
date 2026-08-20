@@ -170,13 +170,19 @@ export interface AnalysisSuccess {
     unknowns: { field: string; effect: string }[];
   };
   english_analysis: {
+    /** Current sections produced by analysis_narrative.build_acquisition_analysis. */
+    overall_assessment?: string[];
+    strengths?: string[];
+    weaknesses_risks?: string[];
+    key_due_diligence_questions?: string[];
+    /** Backward-compatible aliases retained by the web interface. */
     summary: string;
     attractive_factors: string[];
     financial_concerns: string[];
-    transition_strengths: string[];
-    transition_concerns: string[];
+    transition_strengths?: string[];
+    transition_concerns?: string[];
     priority_due_diligence: string[];
-    scope_note: string;
+    scope_note?: string;
   };
   cash_flow_projections: YearResult[];
   service_categories: ServiceCategoryAnalysis[];
