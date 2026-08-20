@@ -26,6 +26,7 @@ const PYODIDE_INDEX_URL = `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/
 /** Backend modules copied verbatim into the interpreter's filesystem. */
 export const BACKEND_MODULES = [
   "acquisition_engine.py",
+  "analysis_narrative.py",
   "practice_cli.py",
   "practice_analyzer.py",
   "web_interface.py",
