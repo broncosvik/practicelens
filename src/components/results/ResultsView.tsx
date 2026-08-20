@@ -211,11 +211,12 @@ export function ResultsView({
   const { scores, analysis, english_analysis: narrative, financing, service_summary: summary } = result;
 
   // The backend is authoritative for every sentence below; nothing is generated here.
-  const overallAssessment =
+  const serviceNames = result.service_categories.map((service) => service.name);
+  const overallAssessment = (
     narrative.overall_assessment && narrative.overall_assessment.length > 0
       ? narrative.overall_assessment
-      : [narrative.summary];
-  const serviceNames = result.service_categories.map((service) => service.name);
+      : [narrative.summary]
+  ).map((paragraph) => humanizeFieldPaths(paragraph, serviceNames));
   const strengths = (narrative.strengths ?? narrative.attractive_factors).map((item) =>
     humanizeFieldPaths(item, serviceNames),
   );
