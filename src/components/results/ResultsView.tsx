@@ -485,14 +485,42 @@ export function ResultsView({
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Metric label="Purchase price" value={money(financing.purchase_price)} />
           <Metric
-            label="Expected consideration"
+            label="Buyer cash paid at closing"
+            value={money(Number(financing.terms.down_payment ?? 0))}
+            hint="Your own equity funded at closing. Excludes borrowed funds and future payments."
+          />
+          <Metric
+            label="Bank / SBA financing"
+            value={money(Number(financing.terms.bank_loan ?? 0))}
+            hint="Borrowed at closing and repaid over time; not buyer cash."
+          />
+          <Metric
+            label="Seller-note principal"
+            value={money(Number(financing.terms.seller_note ?? 0))}
+            hint="Deferred principal owed to the seller; not paid at closing."
+          />
+          <Metric
+            label="Maximum earn-out"
+            value={money(Number(financing.terms.earnout_total ?? 0))}
+            hint="Payable only at full retention; contingent, not paid at closing."
+          />
+          <Metric
+            label="Expected earn-out"
+            value={money(financing.actual_earnout)}
+            hint="Earn-out expected to be earned at your retention assumption."
+          />
+          <Metric
+            label="Expected total consideration"
             value={money(financing.actual_consideration)}
-            hint="Reflects the earn-out actually expected to be earned at your retention assumption."
+            hint="Purchase price adjusted for the earn-out expected to be earned. Excludes interest."
           />
           <Metric label="Annual bank debt service" value={money(financing.annual_bank_debt_service)} />
           <Metric label="Annual seller debt service" value={money(financing.annual_seller_debt_service)} />
-          <Metric label="Expected earn-out" value={money(financing.actual_earnout)} />
-          <Metric label="Total cash paid at closing" value={money(analysis.total_acquisition_cash_paid)} />
+          <Metric
+            label="Total acquisition cash outflows over time"
+            value={money(analysis.total_acquisition_cash_paid)}
+            hint="Buyer cash at closing plus all debt service, fees, and expected earn-out payments across the analysis horizon."
+          />
           <Metric label="Total seller interest" value={money(analysis.total_seller_interest)} />
           <Metric label="Total bank interest" value={money(analysis.total_bank_interest)} />
         </div>
