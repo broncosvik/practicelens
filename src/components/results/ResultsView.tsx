@@ -199,6 +199,25 @@ export function ResultsView({
 }) {
   const { scores, analysis, english_analysis: narrative, financing, service_summary: summary } = result;
 
+  // The backend is authoritative for every sentence below; nothing is generated here.
+  const overallAssessment =
+    narrative.overall_assessment && narrative.overall_assessment.length > 0
+      ? narrative.overall_assessment
+      : [narrative.summary];
+  const strengths = narrative.strengths ?? narrative.attractive_factors;
+  const risks = narrative.weaknesses_risks ?? narrative.financial_concerns;
+  const dueDiligence = narrative.key_due_diligence_questions ?? narrative.priority_due_diligence;
+
+  const concentrationComponent = scores.financial_operational.components.find(
+    (component) => component.name === "Actual client concentration",
+  );
+  const concentrationKnown = Boolean(
+    concentrationComponent && concentrationComponent.value !== "Excluded",
+  );
+  const serviceMixComponent = scores.financial_operational.components.find(
+    (component) => component.name === "Service mix diversification",
+  );
+
   const cashFlowData = useMemo(
     () =>
       result.cash_flow_projections.map((year) => ({
