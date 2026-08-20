@@ -13,6 +13,7 @@ import math
 from typing import Any
 
 import acquisition_engine as engine
+from analysis_narrative import build_acquisition_analysis
 
 
 class RequestValidationError(ValueError):
@@ -104,6 +105,17 @@ def _parse_practice(payload: dict[str, Any]) -> engine.Practice:
     path = "practice"
     services = _parse_services(_required(payload, "services", path))
     clients = _integer_or_none(payload.get("client_relationships"), f"{path}.client_relationships")
+    concentration = []
+    for key in ("largest_client_revenue_percentage", "top_5_client_revenue_percentage",
+                "top_10_client_revenue_percentage"):
+        value = payload.get(key)
+        concentration.append(None if value is None else _rate(value, f"{path}.{key}"))
+    known_concentration = [value for value in concentration if value is not None]
+    if any(left > right for left, right in zip(known_concentration, known_concentration[1:])):
+        raise RequestValidationError(
+            f"{path}.client_concentration",
+            "Known values must satisfy largest client <= top 5 clients <= top 10 clients.",
+        )
     return engine.Practice(
         annual_revenue=_number(_required(payload, "annual_revenue", path), f"{path}.annual_revenue", minimum=0.01),
         asking_price=_number(_required(payload, "asking_price", path), f"{path}.asking_price", minimum=0.01),
@@ -116,6 +128,9 @@ def _parse_practice(payload: dict[str, Any]) -> engine.Practice:
             payload.get("staff_retention_sensitive_percentage", engine.DEFAULT_STAFF_VARIABLE_PERCENTAGE),
             f"{path}.staff_retention_sensitive_percentage",
         ),
+        largest_client_revenue_share=concentration[0],
+        top_5_client_revenue_share=concentration[1],
+        top_10_client_revenue_share=concentration[2],
     )
 
 
@@ -176,7 +191,11 @@ def _score_dict(score: engine.QualityScore) -> dict[str, Any]:
     return {
         "score": score.score,
         "band": score.band,
-        "components": [asdict(component) | {"weighted_points": component.weighted_points}
+        "components": [asdict(component) | {
+                           "weighted_points": component.weighted_points,
+                           "display_weight": round(component.weight, 1),
+                           "display_weighted_points": round(component.weighted_points, 1),
+                       }
                        for component in score.components],
         "strengths": list(score.strengths),
         "concerns": list(score.concerns),
@@ -206,33 +225,6 @@ def _service_analysis(practice: engine.Practice, scenario: engine.Scenario) -> l
             "year_1_retained_owner_hours": retained.retained_owner_hours,
         })
     return rows
-
-
-def _english_analysis(financial: engine.QualityScore, transition: engine.QualityScore,
-                      overall: int, scenario: engine.Scenario) -> dict[str, Any]:
-    owner_note = (
-        "Owner-labor economics are unavailable because reliable owner hours were not provided."
-        if scenario.owner_labor_value is None
-        else (f"Year-one target owner compensation is {engine.money(scenario.owner_labor_value)}; "
-              f"residual ownership profit is {engine.money(scenario.economic_profit or 0)}.")
-    )
-    return {
-        "summary": (
-            f"Overall acquisition score: {overall}/100. Financial/operational assessment: "
-            f"{financial.band}. Transition assessment: {transition.band}. {owner_note}"
-        ),
-        "attractive_factors": list(financial.strengths),
-        "financial_concerns": list(financial.concerns),
-        "transition_strengths": list(transition.strengths),
-        "transition_concerns": list(transition.concerns),
-        "priority_due_diligence": list(dict.fromkeys(
-            financial.investigation_items[:2] + transition.investigation_items[:2]
-        )),
-        "scope_note": (
-            "The base analysis evaluates only the existing acquired book and gives no credit "
-            "for referrals, cross-selling, new services, fee increases, or buyer-created growth."
-        ),
-    }
 
 
 def analyze_acquisition(request: dict[str, Any]) -> dict[str, Any]:
@@ -310,6 +302,16 @@ def analyze_acquisition(request: dict[str, Any]) -> dict[str, Any]:
                 "field": "practice.client_relationships",
                 "effect": "Revenue-per-client analysis is unavailable.",
             })
+        for key, value in (
+            ("largest_client_revenue_percentage", practice.largest_client_revenue_share),
+            ("top_5_client_revenue_percentage", practice.top_5_client_revenue_share),
+            ("top_10_client_revenue_percentage", practice.top_10_client_revenue_share),
+        ):
+            if value is None:
+                unknowns.append({
+                    "field": f"practice.{key}",
+                    "effect": "This client-concentration measure is excluded from scoring.",
+                })
 
         response = {
             "ok": True,
@@ -328,8 +330,13 @@ def analyze_acquisition(request: dict[str, Any]) -> dict[str, Any]:
                 "applied_defaults": applied_defaults,
                 "unknowns": unknowns,
             },
-            "english_analysis": _english_analysis(
-                financial_score, transition_score, overall_score, scenario
+            "english_analysis": build_acquisition_analysis(
+                practice, financing, scenario, financial_score, transition,
+                transition_score, overall_score,
+                uncertainties=tuple(
+                    f"Verify {item['field']} because the analysis used an analyzer default."
+                    for item in applied_defaults
+                ),
             ),
             "cash_flow_projections": [asdict(year) for year in scenario.years],
             "service_categories": _service_analysis(practice, scenario),

@@ -126,6 +126,9 @@ class Practice:
     annual_staff_costs: float
     owner_hourly_value: float
     staff_variable_percentage: float = DEFAULT_STAFF_VARIABLE_PERCENTAGE
+    largest_client_revenue_share: float | None = None
+    top_5_client_revenue_share: float | None = None
+    top_10_client_revenue_share: float | None = None
 
     @property
     def annual_owner_hours(self) -> float | None:
@@ -345,6 +348,18 @@ def validate_practice(practice: Practice) -> None:
         raise ValueError("Owner hourly value cannot be negative.")
     if not 0 <= practice.staff_variable_percentage <= 1:
         raise ValueError("Variable staff cost percentage must be between 0% and 100%.")
+    concentration_values = (
+        practice.largest_client_revenue_share,
+        practice.top_5_client_revenue_share,
+        practice.top_10_client_revenue_share,
+    )
+    if any(value is not None and not 0 <= value <= 1 for value in concentration_values):
+        raise ValueError("Client concentration percentages must be between 0% and 100%.")
+    known_concentrations = [value for value in concentration_values if value is not None]
+    if any(left > right for left, right in zip(known_concentrations, known_concentrations[1:])):
+        raise ValueError(
+            "Client concentration must satisfy largest client <= top 5 clients <= top 10 clients."
+        )
     for service in practice.services:
         if ((service.engagements is not None and service.engagements < 0)
                 or service.annual_revenue < 0
@@ -579,6 +594,73 @@ def clamp(value: float, minimum: float = 0, maximum: float = 100) -> float:
     return max(minimum, min(maximum, value))
 
 
+def interpolated_score(value: float, anchors: tuple[tuple[float, float], ...]) -> float:
+    """Return a bounded, continuous piecewise-linear score from ordered anchors."""
+    if value <= anchors[0][0]:
+        return clamp(anchors[0][1])
+    for (left_value, left_score), (right_value, right_score) in zip(anchors, anchors[1:]):
+        if value <= right_value:
+            position = (value - left_value) / (right_value - left_value)
+            return clamp(left_score + position * (right_score - left_score))
+    return clamp(anchors[-1][1])
+
+
+def purchase_multiple_score(multiple: float) -> float:
+    """Buyer-side valuation attractiveness, with diminishing credit below 0.70x."""
+    return interpolated_score(multiple, (
+        (0.50, 100), (0.60, 99), (0.70, 98), (0.80, 90), (0.90, 80),
+        (1.00, 70), (1.10, 60), (1.20, 50), (1.30, 40), (1.40, 30),
+        (1.50, 20), (1.70, 8), (2.00, 0),
+    ))
+
+
+def revenue_per_client_score(revenue_per_client: float) -> float:
+    """A deliberately gentle contextual signal, not a standalone quality verdict."""
+    return interpolated_score(revenue_per_client, (
+        (0, 10), (200, 25), (300, 32), (400, 38), (500, 44), (625, 50),
+        (750, 55), (1_000, 64), (1_500, 76), (2_500, 88),
+        (5_000, 96), (7_500, 100),
+    ))
+
+
+def service_mix_diversification_score(largest_service_share: float) -> float:
+    """Contextual service-mix breadth; this is not client-concentration risk."""
+    return interpolated_score(largest_service_share, (
+        (0.20, 100), (0.25, 96), (0.40, 90), (0.50, 85), (0.60, 78),
+        (0.70, 68), (0.80, 55), (0.90, 35), (1.00, 15),
+    ))
+
+
+def actual_client_concentration_score(
+    largest_client_share: float | None,
+    top_5_share: float | None,
+    top_10_share: float | None,
+) -> float | None:
+    """Score known unique-client concentration measures, reweighting available signals."""
+    measures = (
+        (largest_client_share, 0.60, (
+            (0.02, 100), (0.05, 95), (0.10, 80), (0.15, 60),
+            (0.20, 40), (0.30, 15), (0.40, 0),
+        )),
+        (top_5_share, 0.25, (
+            (0.10, 100), (0.20, 90), (0.30, 75), (0.40, 55),
+            (0.55, 30), (0.70, 10), (0.85, 0),
+        )),
+        (top_10_share, 0.15, (
+            (0.15, 100), (0.30, 90), (0.45, 75), (0.60, 55),
+            (0.75, 30), (0.90, 10), (1.00, 0),
+        )),
+    )
+    available = [
+        (weight, interpolated_score(value, anchors))
+        for value, weight, anchors in measures if value is not None
+    ]
+    if not available:
+        return None
+    available_weight = sum(weight for weight, _ in available)
+    return sum(weight * score for weight, score in available) / available_weight
+
+
 def retention_contingent_score(share: float) -> float:
     """Graduated heuristic: some risk sharing helps, but no allocation earns perfection."""
     anchors = ((0.0, 35), (0.10, 60), (0.20, 80), (0.30, 90),
@@ -687,6 +769,16 @@ def calculate_quality_score(
         )
     )
     low_quality_share = low_quality_revenue / practice.annual_revenue
+    client_concentration_score = actual_client_concentration_score(
+        practice.largest_client_revenue_share,
+        practice.top_5_client_revenue_share,
+        practice.top_10_client_revenue_share,
+    )
+    concentration_known_count = sum(value is not None for value in (
+        practice.largest_client_revenue_share,
+        practice.top_5_client_revenue_share,
+        practice.top_10_client_revenue_share,
+    ))
 
     revenue_hour_score = (
         clamp((scenario.effective_revenue_per_owner_hour - 150) / 250 * 100)
@@ -699,21 +791,26 @@ def calculate_quality_score(
         and math.isfinite(scenario.total_acquisition_payback_years) else 0
     )
     all_components = (
-        ScoreComponent("Purchase price / revenue", 10, clamp((1.35 - multiple) / 0.70 * 100), f"{multiple:.2f}x"),
+        ScoreComponent("Purchase price / revenue", 10, purchase_multiple_score(multiple), f"{multiple:.2f}x"),
         ScoreComponent("Recurring revenue", 9, summary.recurring_revenue / practice.annual_revenue * 100, f"{summary.recurring_revenue / practice.annual_revenue:.1%}"),
-        ScoreComponent("Revenue per client", 6,
-                       clamp((average_client_revenue - 750) / 1750 * 100) if average_client_revenue is not None else 0,
+        ScoreComponent("Revenue per client", 2,
+                       revenue_per_client_score(average_client_revenue) if average_client_revenue is not None else 0,
                        money(average_client_revenue) if average_client_revenue is not None else "Excluded"),
         ScoreComponent("Revenue per owner hour", 9, revenue_hour_score, money(scenario.effective_revenue_per_owner_hour) if scenario.effective_revenue_per_owner_hour is not None else "Excluded"),
         ScoreComponent("Residual ownership margin", 11, clamp((residual_margin + 0.10) / 0.30 * 100) if residual_margin is not None else 0, f"{residual_margin:.1%}" if residual_margin is not None else "Excluded"),
         ScoreComponent("Return on initial equity", 11, roe_score, f"{return_on_equity:.1%}" if return_on_equity is not None else "Excluded"),
         ScoreComponent("Total acquisition payback", 9, payback_score, f"{scenario.total_acquisition_payback_years:.1f} years" if scenario.total_acquisition_payback_years is not None and math.isfinite(scenario.total_acquisition_payback_years) else "Not recovered in horizon"),
-        ScoreComponent("Service concentration", 8, clamp((0.70 - summary.largest_service_share) / 0.50 * 100), f"largest service {summary.largest_service_share:.1%}"),
-        ScoreComponent("Expected retention", 8, clamp((scenario.retention_rate - 0.75) / 0.20 * 100), f"{scenario.retention_rate:.1%}"),
+        ScoreComponent("Service mix diversification", 2,
+                       service_mix_diversification_score(summary.largest_service_share),
+                       f"largest service {summary.largest_service_share:.1%}"),
+        ScoreComponent("Actual client concentration", 6,
+                       client_concentration_score if client_concentration_score is not None else 0,
+                       f"{concentration_known_count}/3 measures known" if client_concentration_score is not None else "Excluded"),
+        ScoreComponent("Expected retention", 11, clamp((scenario.retention_rate - 0.75) / 0.20 * 100), f"{scenario.retention_rate:.1%}"),
         ScoreComponent("Owner workload", 5, clamp((700 - hours_per_100k) / 450 * 100) if hours_per_100k is not None else 0, f"{hours_per_100k:,.0f} hrs/$100k" if hours_per_100k is not None else "Excluded"),
         ScoreComponent("Service economics / quality", 4, service_mix_score, f"{service_mix_score:.0f}/100 mix index"),
         ScoreComponent("Low-fee/labor dependence", 3, (1 - low_quality_share) * 100, f"{low_quality_share:.1%} exposed"),
-        ScoreComponent("Financing structure / risk", 7,
+        ScoreComponent("Financing structure / risk", 8,
                        financing_structure_score(practice, financing, scenario),
                        f"fixed DS {(scenario.annual_bank_payment + scenario.annual_debt_payment) / scenario.operating_cash_flow:.1%}" if scenario.operating_cash_flow > 0 else "nonpositive operating CF"),
     )
@@ -727,6 +824,8 @@ def calculate_quality_score(
         })
     if not clients_known:
         excluded_components.add("Revenue per client")
+    if client_concentration_score is None:
+        excluded_components.add("Actual client concentration")
     if excluded_components:
         available = [c for c in all_components if c.name not in excluded_components]
         available_weight = sum(c.weight for c in available)
@@ -747,7 +846,8 @@ def calculate_quality_score(
         "Residual ownership margin": "Reconcile normalized costs and target owner compensation to historical results.",
         "Return on initial equity": "Stress-test equity returns under lower retention and higher operating costs.",
         "Total acquisition payback": "Review whether financing terms can shorten the total acquisition payback.",
-        "Service concentration": "Review retention and transition risk in the largest service category.",
+        "Service mix diversification": "Review whether specialization creates seasonality, workflow, or transferability risk; do not confuse it with client concentration.",
+        "Actual client concentration": "Obtain client-level revenue and investigate dependence on unusually large relationships.",
         "Expected retention": "Support retention assumptions with client tenure, transition plans, and attrition history.",
         "Owner workload": "Confirm owner hours by service and seasonal capacity requirements.",
         "Service economics / quality": "Validate service-level fees, recurrence, and owner hours rather than relying on service labels.",
@@ -756,6 +856,10 @@ def calculate_quality_score(
     }
     weakest = sorted(components, key=lambda component: component.score)
     investigations_list = [issue_map[component.name] for component in weakest[:4]]
+    if concentration_known_count < 3:
+        investigations_list.insert(
+            0, "Obtain complete client-level revenue detail to verify largest-client, top-five, and top-ten concentration."
+        )
     if not owner_hours_known:
         investigations_list.insert(
             0, "Obtain reliable owner hours by service before relying on owner-labor economics."
@@ -838,6 +942,8 @@ __all__ = (
     "DataQualityAssessment", "annual_loan_payment", "amortization_schedule", "money",
     "validate_terms", "validate_practice", "summarize_services", "normalize_retention",
     "retained_services_for_year", "analyze", "assess_data_quality", "clamp",
+    "interpolated_score", "purchase_multiple_score", "revenue_per_client_score",
+    "service_mix_diversification_score", "actual_client_concentration_score",
     "retention_contingent_score", "financing_structure_score", "service_economic_quality",
     "service_mix_economic_score", "quality_band", "transition_band",
     "calculate_quality_score", "calculate_transition_score", "calculate_overall_score",
