@@ -71,6 +71,8 @@ export interface ScoreComponent {
   score: number;
   value: string;
   weighted_points: number;
+  display_weight?: number;
+  display_weighted_points?: number;
 }
 
 export interface QualityScore {
