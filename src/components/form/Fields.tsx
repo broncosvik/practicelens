@@ -36,10 +36,10 @@ export function FieldShell({
   className,
 }: {
   label: string;
-  htmlFor?: string;
-  hint?: ReactNode;
+  htmlFor?: string | undefined;
+  hint?: ReactNode | undefined;
   children: ReactNode;
-  className?: string;
+  className?: string | undefined;
 }) {
   return (
     <div className={cn("space-y-1.5", className)}>
@@ -56,11 +56,11 @@ interface NumericFieldProps {
   label: string;
   value: string;
   onChange: (value: string) => void;
-  hint?: ReactNode;
-  placeholder?: string;
+  hint?: ReactNode | undefined;
+  placeholder?: string | undefined;
   adornment?: "currency" | "percent" | "none";
-  suffix?: string;
-  className?: string;
+  suffix?: string | undefined;
+  className?: string | undefined;
 }
 
 export function NumericField({
@@ -113,7 +113,7 @@ export function ToggleField({
   label: string;
   value: boolean;
   onChange: (value: boolean) => void;
-  hint?: ReactNode;
+  hint?: ReactNode | undefined;
 }) {
   const id = useId();
   return (
@@ -138,7 +138,7 @@ export function SegmentedYesNo({
   label: string;
   value: boolean;
   onChange: (value: boolean) => void;
-  hint?: ReactNode;
+  hint?: ReactNode | undefined;
 }) {
   return (
     <FieldShell label={label} hint={hint}>
@@ -178,7 +178,7 @@ export function RatingField({
   label: string;
   value: number;
   onChange: (value: number) => void;
-  hint?: ReactNode;
+  hint?: ReactNode | undefined;
 }) {
   return (
     <FieldShell label={label} hint={hint}>
