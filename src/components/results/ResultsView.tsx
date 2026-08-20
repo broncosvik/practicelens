@@ -29,7 +29,16 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Separator } from "@/components/ui/separator";
-import { analysisDate, money, number as formatNumber, percent, years } from "@/lib/format";
+import { analysisDate, money, number as formatNumber, percent } from "@/lib/format";
+import {
+  consolidateDueDiligence,
+  displayWeight,
+  displayWeightedPoints,
+  fieldLabel,
+  humanizeFieldPaths,
+  ownerHoursKnown,
+  paybackDisplay,
+} from "@/lib/analysis/presentation";
 import type { AnalysisSuccess, QualityScore } from "@/lib/analysis/types";
 
 function ScoreDial({
@@ -106,9 +115,11 @@ function ComponentTable({ score }: { score: QualityScore }) {
             <tr key={component.name} className="border-t border-border align-top">
               <td className="px-3 py-2 font-medium">{component.name}</td>
               <td className="px-3 py-2 text-muted-foreground">{component.value}</td>
-              <td className="px-3 py-2 text-right text-muted-foreground">{component.weight}</td>
+              <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
+                {displayWeight(component)}
+              </td>
               <td className="px-3 py-2 text-right tabular-nums">
-                {component.weighted_points.toFixed(1)}
+                {displayWeightedPoints(component)}
               </td>
             </tr>
           ))}
@@ -200,13 +211,30 @@ export function ResultsView({
   const { scores, analysis, english_analysis: narrative, financing, service_summary: summary } = result;
 
   // The backend is authoritative for every sentence below; nothing is generated here.
-  const overallAssessment =
+  const serviceNames = result.service_categories.map((service) => service.name);
+  const overallAssessment = (
     narrative.overall_assessment && narrative.overall_assessment.length > 0
       ? narrative.overall_assessment
-      : [narrative.summary];
-  const strengths = narrative.strengths ?? narrative.attractive_factors;
-  const risks = narrative.weaknesses_risks ?? narrative.financial_concerns;
-  const dueDiligence = narrative.key_due_diligence_questions ?? narrative.priority_due_diligence;
+      : [narrative.summary]
+  ).map((paragraph) => humanizeFieldPaths(paragraph, serviceNames));
+  const strengths = (narrative.strengths ?? narrative.attractive_factors).map((item) =>
+    humanizeFieldPaths(item, serviceNames),
+  );
+  const risks = (narrative.weaknesses_risks ?? narrative.financial_concerns).map((item) =>
+    humanizeFieldPaths(item, serviceNames),
+  );
+  // One consolidated, deduplicated diligence list across narrative and both score sections.
+  const dueDiligence = consolidateDueDiligence(
+    [
+      narrative.key_due_diligence_questions ?? narrative.priority_due_diligence,
+      scores.financial_operational.due_diligence,
+      scores.transition_qualitative.due_diligence,
+    ],
+    serviceNames,
+  );
+
+  const hoursKnown = ownerHoursKnown(result);
+  const horizonYears = result.cash_flow_projections.length;
 
   const concentrationComponent = scores.financial_operational.components.find(
     (component) => component.name === "Actual client concentration",
@@ -359,11 +387,28 @@ export function ResultsView({
             hint="What the practice earns beyond paying you for your time."
           />
           <Metric label="Retained revenue (year 1)" value={money(analysis.retained_revenue)} />
-          <Metric label="Cash-on-cash return" value={percent(analysis.cash_on_cash_return)} />
-          <Metric label="Equity payback" value={years(analysis.equity_payback_years)} />
+          <Metric
+            label="Year 1 cash return on buyer equity, before owner labor"
+            value={percent(analysis.cash_on_cash_return)}
+            hint={
+              hoursKnown
+                ? "Year 1 net cash flow divided by buyer cash at closing. Owner labor is not deducted here; see residual ownership profit."
+                : "Year 1 net cash flow divided by buyer cash at closing. Owner labor has not been valued because owner hours are unknown, so this is not a labor-adjusted investment return."
+            }
+          />
+          <Metric
+            label="Equity payback"
+            value={paybackDisplay(analysis.equity_payback_years, hoursKnown, horizonYears)}
+            hint="Years for residual ownership profit to repay buyer cash at closing."
+          />
           <Metric
             label="Total acquisition payback"
-            value={years(analysis.total_acquisition_payback_years)}
+            value={paybackDisplay(
+              analysis.total_acquisition_payback_years,
+              hoursKnown,
+              horizonYears,
+            )}
+            hint="Years for ownership cash flow to repay total acquisition cash outflows."
           />
         </div>
 
@@ -441,14 +486,42 @@ export function ResultsView({
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Metric label="Purchase price" value={money(financing.purchase_price)} />
           <Metric
-            label="Expected consideration"
+            label="Buyer cash paid at closing"
+            value={money(Number(financing.terms['down_payment'] ?? 0))}
+            hint="Your own equity funded at closing. Excludes borrowed funds and future payments."
+          />
+          <Metric
+            label="Bank / SBA financing"
+            value={money(Number(financing.terms['bank_loan'] ?? 0))}
+            hint="Borrowed at closing and repaid over time; not buyer cash."
+          />
+          <Metric
+            label="Seller-note principal"
+            value={money(Number(financing.terms['seller_note'] ?? 0))}
+            hint="Deferred principal owed to the seller; not paid at closing."
+          />
+          <Metric
+            label="Maximum earn-out"
+            value={money(Number(financing.terms['earnout_total'] ?? 0))}
+            hint="Payable only at full retention; contingent, not paid at closing."
+          />
+          <Metric
+            label="Expected earn-out"
+            value={money(financing.actual_earnout)}
+            hint="Earn-out expected to be earned at your retention assumption."
+          />
+          <Metric
+            label="Expected total consideration"
             value={money(financing.actual_consideration)}
-            hint="Reflects the earn-out actually expected to be earned at your retention assumption."
+            hint="Purchase price adjusted for the earn-out expected to be earned. Excludes interest."
           />
           <Metric label="Annual bank debt service" value={money(financing.annual_bank_debt_service)} />
           <Metric label="Annual seller debt service" value={money(financing.annual_seller_debt_service)} />
-          <Metric label="Expected earn-out" value={money(financing.actual_earnout)} />
-          <Metric label="Total cash paid at closing" value={money(analysis.total_acquisition_cash_paid)} />
+          <Metric
+            label="Total acquisition cash outflows over time"
+            value={money(analysis.total_acquisition_cash_paid)}
+            hint="Buyer cash at closing plus all debt service, fees, and expected earn-out payments across the analysis horizon."
+          />
           <Metric label="Total seller interest" value={money(analysis.total_seller_interest)} />
           <Metric label="Total bank interest" value={money(analysis.total_bank_interest)} />
         </div>
@@ -495,8 +568,8 @@ export function ResultsView({
             />
             <Metric
               label="Weight in the financial score"
-              value={String(concentrationComponent.display_weight ?? concentrationComponent.weight)}
-              hint={`Contributed ${(concentrationComponent.display_weighted_points ?? concentrationComponent.weighted_points).toFixed(1)} points.`}
+              value={displayWeight(concentrationComponent)}
+              hint={`Contributed ${displayWeightedPoints(concentrationComponent)} points.`}
             />
           </div>
         ) : (
@@ -652,7 +725,8 @@ export function ResultsView({
             <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
               {result.assumptions.applied_defaults.map((item) => (
                 <li key={item.field}>
-                  <span className="font-mono text-xs">{item.field}</span> — {String(item.value)}
+                  <span className="font-medium">{fieldLabel(item.field, serviceNames)}</span> —{" "}
+                  {String(item.value)}
                 </li>
               ))}
             </ul>
@@ -668,7 +742,8 @@ export function ResultsView({
             <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
               {result.assumptions.unknowns.map((item) => (
                 <li key={item.field}>
-                  <span className="font-mono text-xs">{item.field}</span> — {item.effect}
+                  <span className="font-medium">{fieldLabel(item.field, serviceNames)}</span> —{" "}
+                  {item.effect}
                 </li>
               ))}
             </ul>
@@ -709,20 +784,7 @@ export function ResultsView({
 
         <Separator />
 
-        <PointList title="Key due-diligence questions" items={dueDiligence} tone="neutral" />
-
-        <div className="grid gap-6 md:grid-cols-2">
-          <PointList
-            title="Additional financial due diligence"
-            items={scores.financial_operational.due_diligence}
-            tone="neutral"
-          />
-          <PointList
-            title="Additional transition due diligence"
-            items={scores.transition_qualitative.due_diligence}
-            tone="neutral"
-          />
-        </div>
+        <PointList title="Key due-diligence priorities" items={dueDiligence} tone="neutral" />
 
         {narrative.scope_note ? (
           <div className="print-block rounded-lg border border-border bg-surface p-4 text-sm leading-relaxed text-muted-foreground">
