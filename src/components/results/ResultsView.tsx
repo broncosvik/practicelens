@@ -215,9 +215,25 @@ export function ResultsView({
     narrative.overall_assessment && narrative.overall_assessment.length > 0
       ? narrative.overall_assessment
       : [narrative.summary];
-  const strengths = narrative.strengths ?? narrative.attractive_factors;
-  const risks = narrative.weaknesses_risks ?? narrative.financial_concerns;
-  const dueDiligence = narrative.key_due_diligence_questions ?? narrative.priority_due_diligence;
+  const serviceNames = result.service_categories.map((service) => service.name);
+  const strengths = (narrative.strengths ?? narrative.attractive_factors).map((item) =>
+    humanizeFieldPaths(item, serviceNames),
+  );
+  const risks = (narrative.weaknesses_risks ?? narrative.financial_concerns).map((item) =>
+    humanizeFieldPaths(item, serviceNames),
+  );
+  // One consolidated, deduplicated diligence list across narrative and both score sections.
+  const dueDiligence = consolidateDueDiligence(
+    [
+      narrative.key_due_diligence_questions ?? narrative.priority_due_diligence,
+      scores.financial_operational.due_diligence,
+      scores.transition_qualitative.due_diligence,
+    ],
+    serviceNames,
+  );
+
+  const hoursKnown = ownerHoursKnown(result);
+  const horizonYears = result.cash_flow_projections.length;
 
   const concentrationComponent = scores.financial_operational.components.find(
     (component) => component.name === "Actual client concentration",
