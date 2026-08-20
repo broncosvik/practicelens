@@ -98,6 +98,8 @@ interface NumericFieldProps {
   value: string;
   onChange: (value: string) => void;
   hint?: ReactNode | undefined;
+  /** Status of the value shown: active default, example, or optional/unknown. */
+  note?: ReactNode | undefined;
   placeholder?: string | undefined;
   adornment?: "currency" | "percent" | "none";
   suffix?: string | undefined;
@@ -109,6 +111,7 @@ export function NumericField({
   value,
   onChange,
   hint,
+  note,
   placeholder,
   adornment = "none",
   suffix,
@@ -116,7 +119,19 @@ export function NumericField({
 }: NumericFieldProps) {
   const id = useId();
   return (
-    <FieldShell label={label} htmlFor={id} hint={hint} className={className}>
+    <FieldShell
+      label={label}
+      htmlFor={id}
+      hint={
+        note || hint ? (
+          <>
+            {note ? <div className="mb-1">{note}</div> : null}
+            {hint}
+          </>
+        ) : undefined
+      }
+      className={className}
+    >
       <div className="relative">
         {adornment === "currency" ? (
           <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
