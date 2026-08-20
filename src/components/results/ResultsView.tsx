@@ -386,11 +386,28 @@ export function ResultsView({
             hint="What the practice earns beyond paying you for your time."
           />
           <Metric label="Retained revenue (year 1)" value={money(analysis.retained_revenue)} />
-          <Metric label="Cash-on-cash return" value={percent(analysis.cash_on_cash_return)} />
-          <Metric label="Equity payback" value={years(analysis.equity_payback_years)} />
+          <Metric
+            label="Year 1 cash return on buyer equity, before owner labor"
+            value={percent(analysis.cash_on_cash_return)}
+            hint={
+              hoursKnown
+                ? "Year 1 net cash flow divided by buyer cash at closing. Owner labor is not deducted here; see residual ownership profit."
+                : "Year 1 net cash flow divided by buyer cash at closing. Owner labor has not been valued because owner hours are unknown, so this is not a labor-adjusted investment return."
+            }
+          />
+          <Metric
+            label="Equity payback"
+            value={paybackDisplay(analysis.equity_payback_years, hoursKnown, horizonYears)}
+            hint="Years for residual ownership profit to repay buyer cash at closing."
+          />
           <Metric
             label="Total acquisition payback"
-            value={years(analysis.total_acquisition_payback_years)}
+            value={paybackDisplay(
+              analysis.total_acquisition_payback_years,
+              hoursKnown,
+              horizonYears,
+            )}
+            hint="Years for ownership cash flow to repay total acquisition cash outflows."
           />
         </div>
 
