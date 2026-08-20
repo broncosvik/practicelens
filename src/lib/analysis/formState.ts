@@ -100,6 +100,9 @@ export function createInitialFormState(): FormState {
       askingPrice: "",
       clientRelationships: "",
       ownerHourlyValue: "",
+      largestClientPercent: "",
+      topFiveClientPercent: "",
+      topTenClientPercent: "",
     },
     services: SERVICE_CATEGORIES.map((category) => ({
       name: category.name,
