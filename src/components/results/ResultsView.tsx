@@ -640,24 +640,33 @@ export function ResultsView({
         description="The analyzer's written review of this opportunity."
         breakBefore
       >
-        <p className="prose-report border-l-2 border-primary pl-4 text-base leading-relaxed">
-          {narrative.summary}
-        </p>
+        <div className="prose-report space-y-3 border-l-2 border-primary pl-4 text-base leading-relaxed">
+          <h4 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Overall assessment
+          </h4>
+          {overallAssessment.map((paragraph) => (
+            <p key={paragraph}>{paragraph}</p>
+          ))}
+        </div>
 
         <div className="grid gap-6 md:grid-cols-2">
-          <PointList title="Major strengths" items={narrative.attractive_factors} tone="positive" />
-          <PointList title="Major concerns" items={narrative.financial_concerns} tone="negative" />
-          <PointList title="Transition strengths" items={narrative.transition_strengths} tone="positive" />
-          <PointList title="Transition concerns" items={narrative.transition_concerns} tone="negative" />
+          <PointList title="Strengths" items={strengths} tone="positive" />
+          <PointList title="Weaknesses / risks" items={risks} tone="negative" />
+          <PointList
+            title="Transition strengths"
+            items={narrative.transition_strengths ?? []}
+            tone="positive"
+          />
+          <PointList
+            title="Transition concerns"
+            items={narrative.transition_concerns ?? []}
+            tone="negative"
+          />
         </div>
 
         <Separator />
 
-        <PointList
-          title="Priority due diligence"
-          items={narrative.priority_due_diligence}
-          tone="neutral"
-        />
+        <PointList title="Key due-diligence questions" items={dueDiligence} tone="neutral" />
 
         <div className="grid gap-6 md:grid-cols-2">
           <PointList
@@ -672,9 +681,11 @@ export function ResultsView({
           />
         </div>
 
-        <div className="print-block rounded-lg border border-border bg-surface p-4 text-sm leading-relaxed text-muted-foreground">
-          {narrative.scope_note}
-        </div>
+        {narrative.scope_note ? (
+          <div className="print-block rounded-lg border border-border bg-surface p-4 text-sm leading-relaxed text-muted-foreground">
+            {narrative.scope_note}
+          </div>
+        ) : null}
       </Section>
 
       <p className="print-block text-xs leading-relaxed text-muted-foreground">
