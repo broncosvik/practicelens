@@ -166,6 +166,11 @@ export function optionalNum(value: string): number | null {
   return value.trim() === "" ? null : num(value);
 }
 
+/** Percentage entry to a 0-1 rate; blank stays null (Unknown), never 0. */
+export function optionalRate(value: string): number | null {
+  return value.trim() === "" ? null : num(value) / 100;
+}
+
 export function activeServices(state: FormState): ServiceRow[] {
   return state.services.filter((service) => service.enabled);
 }
