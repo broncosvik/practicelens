@@ -781,20 +781,7 @@ export function ResultsView({
 
         <Separator />
 
-        <PointList title="Key due-diligence questions" items={dueDiligence} tone="neutral" />
-
-        <div className="grid gap-6 md:grid-cols-2">
-          <PointList
-            title="Additional financial due diligence"
-            items={scores.financial_operational.due_diligence}
-            tone="neutral"
-          />
-          <PointList
-            title="Additional transition due diligence"
-            items={scores.transition_qualitative.due_diligence}
-            tone="neutral"
-          />
-        </div>
+        <PointList title="Key due-diligence priorities" items={dueDiligence} tone="neutral" />
 
         {narrative.scope_note ? (
           <div className="print-block rounded-lg border border-border bg-surface p-4 text-sm leading-relaxed text-muted-foreground">
