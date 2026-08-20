@@ -724,7 +724,8 @@ export function ResultsView({
             <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
               {result.assumptions.applied_defaults.map((item) => (
                 <li key={item.field}>
-                  <span className="font-mono text-xs">{item.field}</span> — {String(item.value)}
+                  <span className="font-medium">{fieldLabel(item.field, serviceNames)}</span> —{" "}
+                  {String(item.value)}
                 </li>
               ))}
             </ul>
@@ -740,7 +741,8 @@ export function ResultsView({
             <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
               {result.assumptions.unknowns.map((item) => (
                 <li key={item.field}>
-                  <span className="font-mono text-xs">{item.field}</span> — {item.effect}
+                  <span className="font-medium">{fieldLabel(item.field, serviceNames)}</span> —{" "}
+                  {item.effect}
                 </li>
               ))}
             </ul>
