@@ -29,7 +29,16 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Separator } from "@/components/ui/separator";
-import { analysisDate, money, number as formatNumber, percent, years } from "@/lib/format";
+import { analysisDate, money, number as formatNumber, percent } from "@/lib/format";
+import {
+  consolidateDueDiligence,
+  displayWeight,
+  displayWeightedPoints,
+  fieldLabel,
+  humanizeFieldPaths,
+  ownerHoursKnown,
+  paybackDisplay,
+} from "@/lib/analysis/presentation";
 import type { AnalysisSuccess, QualityScore } from "@/lib/analysis/types";
 
 function ScoreDial({
