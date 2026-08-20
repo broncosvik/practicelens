@@ -286,7 +286,11 @@ export function ResultsView({
             tone="primary"
             large
           />
-          <p className="prose-report text-sm leading-relaxed sm:text-base">{narrative.summary}</p>
+          <div className="prose-report space-y-3 text-sm leading-relaxed sm:text-base">
+            {overallAssessment.map((paragraph) => (
+              <p key={paragraph}>{paragraph}</p>
+            ))}
+          </div>
         </div>
 
         <Separator />
