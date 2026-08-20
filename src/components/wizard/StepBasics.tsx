@@ -1,4 +1,4 @@
-import { NumericField, WhyThisMatters } from "@/components/form/Fields";
+import { NumericField, ValueNote, WhyThisMatters } from "@/components/form/Fields";
 import { FieldGrid, SectionCard, StepIntro } from "./StepChrome";
 import type { FormState } from "@/lib/analysis/formState";
 
