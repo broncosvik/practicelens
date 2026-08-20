@@ -228,11 +228,27 @@ function buildAssumptionRecords(state: FormState): AssumptionRecord[] {
   if (state.practice.clientRelationships.trim() === "") {
     records.push(
       record(
-        "Client relationships",
+        "Number of client relationships",
         "Unknown",
         "Unknown",
         "Revenue-per-client analysis is unavailable without a client count.",
       ),
+    );
+  }
+  for (const [label, value] of [
+    ["Largest single client share of revenue", state.practice.largestClientPercent],
+    ["Top 5 clients share of revenue", state.practice.topFiveClientPercent],
+    ["Top 10 clients share of revenue", state.practice.topTenClientPercent],
+  ] as const) {
+    records.push(
+      value.trim() === ""
+        ? record(
+            label,
+            "Unknown",
+            "Unknown",
+            "Client concentration was not provided, so this measure is excluded from scoring.",
+          )
+        : record(label, `${num(value)}%`, "User entered"),
     );
   }
   if (state.transition.keyStaffRetentionUnknown) {
