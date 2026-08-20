@@ -106,9 +106,11 @@ function ComponentTable({ score }: { score: QualityScore }) {
             <tr key={component.name} className="border-t border-border align-top">
               <td className="px-3 py-2 font-medium">{component.name}</td>
               <td className="px-3 py-2 text-muted-foreground">{component.value}</td>
-              <td className="px-3 py-2 text-right text-muted-foreground">{component.weight}</td>
+              <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
+                {displayWeight(component)}
+              </td>
               <td className="px-3 py-2 text-right tabular-nums">
-                {component.weighted_points.toFixed(1)}
+                {displayWeightedPoints(component)}
               </td>
             </tr>
           ))}
