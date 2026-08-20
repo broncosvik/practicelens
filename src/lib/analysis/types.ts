@@ -17,6 +17,10 @@ export interface AnalysisRequest {
     annual_revenue: number;
     asking_price: number;
     client_relationships: number | null;
+    /** Unique-client concentration measures as 0-1 rates; null means unknown. */
+    largest_client_revenue_percentage: number | null;
+    top_5_client_revenue_percentage: number | null;
+    top_10_client_revenue_percentage: number | null;
     services: ServiceRequest[];
     fixed_operating_costs: number;
     staff_variable_costs: number;
