@@ -1,4 +1,4 @@
-import { NumericField, ToggleField, WhyThisMatters } from "@/components/form/Fields";
+import { NumericField, ToggleField, ValueNote, WhyThisMatters } from "@/components/form/Fields";
 import { Callout, FieldGrid, SectionCard, StepIntro } from "./StepChrome";
 import { BACKEND_DEFAULTS, type FormState } from "@/lib/analysis/formState";
 
@@ -32,6 +32,7 @@ export function StepRetentionCosts({
             placeholder="90"
             value={state.retention.firstYear}
             onChange={(value) => updateRetention({ firstYear: value })}
+            note={<ValueNote variant="suggested">90% — required, nothing is assumed</ValueNote>}
             hint={
               <WhyThisMatters>
                 The first year after closing is when clients decide whether to stay. A handful of
@@ -45,6 +46,11 @@ export function StepRetentionCosts({
             adornment="percent"
             value={state.retention.ongoing}
             onChange={(value) => updateRetention({ ongoing: value, overrideOngoing: true })}
+            note={
+              <ValueNote variant="default">
+                {BACKEND_DEFAULTS.ongoingRetentionPercent}% — used unless you change it
+              </ValueNote>
+            }
             hint={
               state.retention.overrideOngoing
                 ? "Your entry replaces the analyzer's default."
@@ -71,6 +77,7 @@ export function StepRetentionCosts({
             placeholder="60,000"
             value={state.costs.fixedOperatingCosts}
             onChange={(value) => updateCosts({ fixedOperatingCosts: value })}
+            note={<ValueNote variant="default">$0 if left blank</ValueNote>}
             hint="Rent, software, insurance, licensing, and other overhead that does not move with client volume."
           />
           <NumericField
@@ -79,6 +86,7 @@ export function StepRetentionCosts({
             placeholder="120,000"
             value={state.costs.staffVariableCosts}
             onChange={(value) => updateCosts({ staffVariableCosts: value })}
+            note={<ValueNote variant="default">$0 if left blank</ValueNote>}
             hint={
               <WhyThisMatters>
                 Staffing is both a cost and a risk. Experienced staff often hold the client
@@ -101,6 +109,11 @@ export function StepRetentionCosts({
             adornment="percent"
             value={state.costs.staffRetentionSensitivePercentage}
             onChange={(value) => updateCosts({ staffRetentionSensitivePercentage: value })}
+            note={
+              <ValueNote variant="default">
+                {BACKEND_DEFAULTS.staffVariablePercent}% unless you change it
+              </ValueNote>
+            }
             className="max-w-xs"
           />
         ) : null}
@@ -119,6 +132,11 @@ export function StepRetentionCosts({
             suffix="yrs"
             value={state.horizon.years}
             onChange={(value) => updateHorizon({ years: value })}
+            note={
+              <ValueNote variant="default">
+                {BACKEND_DEFAULTS.analysisHorizonYears} years unless you change it
+              </ValueNote>
+            }
             className="max-w-xs"
           />
         ) : null}

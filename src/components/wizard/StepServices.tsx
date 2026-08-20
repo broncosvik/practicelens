@@ -1,5 +1,5 @@
 import { Checkbox } from "@/components/ui/checkbox";
-import { NumericField, WhyThisMatters } from "@/components/form/Fields";
+import { NumericField, ValueNote, WhyThisMatters } from "@/components/form/Fields";
 import { Callout, SectionCard, StepIntro } from "./StepChrome";
 import { SERVICE_CATEGORIES, num, serviceRevenueTotal, type FormState } from "@/lib/analysis/formState";
 import { money } from "@/lib/format";
@@ -63,12 +63,14 @@ export function StepServices({
                     adornment="currency"
                     value={service.annualRevenue}
                     onChange={(value) => update(index, { annualRevenue: value })}
+                    note={<ValueNote variant="suggested">required — must total annual revenue</ValueNote>}
                   />
                   <NumericField
                     label={meta?.countLabel ?? "Engagements"}
                     placeholder="Blank if unknown"
                     value={service.engagements}
                     onChange={(value) => update(index, { engagements: value })}
+                    note={<ValueNote variant="optional">blank stays Unknown</ValueNote>}
                   />
                   <NumericField
                     label="Annual owner hours"
@@ -76,6 +78,7 @@ export function StepServices({
                     placeholder="Blank if unknown"
                     value={service.ownerHours}
                     onChange={(value) => update(index, { ownerHours: value })}
+                    note={<ValueNote variant="optional">blank stays Unknown, never 0</ValueNote>}
                   />
                 </div>
               ) : null}
