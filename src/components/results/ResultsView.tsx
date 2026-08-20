@@ -486,22 +486,22 @@ export function ResultsView({
           <Metric label="Purchase price" value={money(financing.purchase_price)} />
           <Metric
             label="Buyer cash paid at closing"
-            value={money(Number(financing.terms.down_payment ?? 0))}
+            value={money(Number(financing.terms['down_payment'] ?? 0))}
             hint="Your own equity funded at closing. Excludes borrowed funds and future payments."
           />
           <Metric
             label="Bank / SBA financing"
-            value={money(Number(financing.terms.bank_loan ?? 0))}
+            value={money(Number(financing.terms['bank_loan'] ?? 0))}
             hint="Borrowed at closing and repaid over time; not buyer cash."
           />
           <Metric
             label="Seller-note principal"
-            value={money(Number(financing.terms.seller_note ?? 0))}
+            value={money(Number(financing.terms['seller_note'] ?? 0))}
             hint="Deferred principal owed to the seller; not paid at closing."
           />
           <Metric
             label="Maximum earn-out"
-            value={money(Number(financing.terms.earnout_total ?? 0))}
+            value={money(Number(financing.terms['earnout_total'] ?? 0))}
             hint="Payable only at full retention; contingent, not paid at closing."
           />
           <Metric
