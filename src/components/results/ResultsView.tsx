@@ -567,8 +567,8 @@ export function ResultsView({
             />
             <Metric
               label="Weight in the financial score"
-              value={String(concentrationComponent.display_weight ?? concentrationComponent.weight)}
-              hint={`Contributed ${(concentrationComponent.display_weighted_points ?? concentrationComponent.weighted_points).toFixed(1)} points.`}
+              value={displayWeight(concentrationComponent)}
+              hint={`Contributed ${displayWeightedPoints(concentrationComponent)} points.`}
             />
           </div>
         ) : (
