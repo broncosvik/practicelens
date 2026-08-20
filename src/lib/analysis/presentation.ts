@@ -42,8 +42,10 @@ const FIELD_PATH_PATTERN =
 export function fieldLabel(field: string, serviceNames: string[] = []): string {
   const service = /^practice\.services\[(\d+)\]\.([A-Za-z0-9_]+)$/.exec(field);
   if (service) {
-    const name = serviceNames[Number(service[1])] ?? `Service ${Number(service[1]) + 1}`;
-    const attribute = SERVICE_FIELD_LABELS[service[2]] ?? service[2].replace(/_/g, " ");
+    const index = Number(service[1]);
+    const attributeKey = service[2] ?? "";
+    const name = serviceNames[index] ?? `Service ${index + 1}`;
+    const attribute = SERVICE_FIELD_LABELS[attributeKey] ?? attributeKey.replace(/_/g, " ");
     return `${name} — ${attribute}`;
   }
   if (STATIC_FIELD_LABELS[field]) return STATIC_FIELD_LABELS[field];
