@@ -189,7 +189,7 @@ function AnalyzerPage() {
             {step === 1 ? (
               <StepServices
                 state={state}
-                updateService={(index, patch) =>
+                update={(index, patch) =>
                   setState({
                     ...state,
                     services: state.services.map((service, position) =>
