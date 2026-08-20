@@ -27,6 +27,7 @@ export function StepBasics({
             placeholder="500,000"
             value={state.practice.askingPrice}
             onChange={(value) => update({ askingPrice: value })}
+            note={<ValueNote variant="suggested">500,000 — required, nothing is assumed</ValueNote>}
             hint={
               <WhyThisMatters>
                 Price alone rarely decides a deal. A higher price can still work with favorable
