@@ -71,8 +71,17 @@ def build_acquisition_analysis(
     elif weak("Actual client concentration"):
         risks.insert(0, "Actual client concentration creates meaningful dependence on one or several major client relationships.")
         diligence.append("Determine whether unusually large clients depend personally on the seller and assess their transfer risk.")
+    largest_service_share = engine.summarize_services(practice).largest_service_share
     if strong("Service mix diversification", 85):
-        strengths.append("The service mix avoids excessive dependence on a single workflow or service line.")
+        if largest_service_share < 0.5:
+            strengths.append(
+                f"No single service category represents a majority of acquired-book revenue; "
+                f"the largest is {largest_service_share:.1%}. This measures service mix only, not client concentration."
+            )
+        else:
+            strengths.append(
+                f"The largest service category represents {largest_service_share:.1%} of acquired-book revenue."
+            )
     if strong("Financing structure / risk"):
         strengths.append("Projected operating cash flow provides a favorable cushion for fixed acquisition debt service.")
     elif weak("Financing structure / risk"):
