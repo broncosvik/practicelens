@@ -103,6 +103,12 @@ function validateStep(step: number, state: FormState): string[] {
     }
   }
   if (step === 4) {
+    if (state.transition.sellerTransitionMonths.trim() === "") {
+      errors.push("Enter the seller transition period.");
+    }
+    if (state.transition.postClosingAvailabilityMonths.trim() === "") {
+      errors.push("Enter the post-closing availability period.");
+    }
     if (
       !state.transition.keyStaffRetentionUnknown &&
       state.transition.expectedKeyStaffRetention.trim() === ""
