@@ -93,9 +93,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         content:
           "Evaluate an accounting or tax practice acquisition with a structured, buyer-side report covering cash flow, retention, financing, and transition risk.",
       },
-
+      { property: "og:type", content: "website" },
+      { property: "og:site_name", content: "Trio Tax Practice Analyzer" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:site", content: "@Lovable" },
+
     ],
     links: [
       {
