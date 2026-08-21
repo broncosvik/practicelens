@@ -20,8 +20,11 @@ export const Route = createFileRoute("/")({
         content:
           "A structured, buyer-side analysis of an accounting practice acquisition — cash flow, retention, financing, and transition risk in one report.",
       },
+      { property: "og:url", content: "https://practicelens.app/" },
     ],
+    links: [{ rel: "canonical", href: "https://practicelens.app/" }],
   }),
+
   component: Index,
 });
 

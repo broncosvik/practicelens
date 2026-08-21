@@ -77,14 +77,26 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { title: "Trio Tax Practice Analyzer — Evaluate Accounting Acquisitions" },
+      {
+        name: "description",
+        content:
+          "Buyer-side analysis for accounting and tax practice acquisitions: cash flow after debt service, retention and concentration risk, financing, and transition quality.",
+      },
+      { name: "author", content: "Trio Tax" },
+      {
+        property: "og:title",
+        content: "Trio Tax Practice Analyzer — Evaluate Accounting Acquisitions",
+      },
+      {
+        property: "og:description",
+        content:
+          "Evaluate an accounting or tax practice acquisition with a structured, buyer-side report covering cash flow, retention, financing, and transition risk.",
+      },
       { property: "og:type", content: "website" },
+      { property: "og:site_name", content: "Trio Tax Practice Analyzer" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:site", content: "@Lovable" },
+
     ],
     links: [
       {
