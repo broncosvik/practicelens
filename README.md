@@ -37,7 +37,7 @@ python3 run_tests.py
 The runner discovers both the original regression tests and the structured
 business-logic suite in `tests/`, then prints an explicit PASS/FAIL summary.
 This includes 1,250 deterministic randomized acquisition scenarios using seed
-`20260819`; a failure reports the seed, case number, and complete generated input.
+`20260819`; a failure reports the seed, case number, and complete generated input..
 
 ## Calculation assumptions
 
