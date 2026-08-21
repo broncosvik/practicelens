@@ -20,7 +20,7 @@ A future web application should import `acquisition_engine` directly, construct
 For a JSON/API boundary, use `web_interface.analyze_acquisition(request)`. It
 accepts a decoded JSON dictionary and returns a JSON-serializable success result
 or structured validation errors. It is framework-neutral and calls
-`acquisition_engine` directly; no HTTP server or frontend framework is included..
+`acquisition_engine` directly; no HTTP server or frontend framework is included.
 
 Run it with:
 
