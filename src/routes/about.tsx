@@ -19,8 +19,11 @@ export const Route = createFileRoute("/about")({
         content:
           "What the analyzer measures, how it scores an opportunity, and what it deliberately leaves to your own due diligence.",
       },
+      { property: "og:url", content: "https://practicelens.app/about" },
     ],
+    links: [{ rel: "canonical", href: "https://practicelens.app/about" }],
   }),
+
   component: AboutPage,
 });
 

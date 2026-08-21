@@ -39,8 +39,11 @@ export const Route = createFileRoute("/analyzer")({
         content:
           "A guided evaluation of an accounting or tax practice acquisition: cash flow, financing risk, service mix, and transition quality.",
       },
+      { property: "og:url", content: "https://practicelens.app/analyzer" },
     ],
+    links: [{ rel: "canonical", href: "https://practicelens.app/analyzer" }],
   }),
+
   component: AnalyzerPage,
 });
 
