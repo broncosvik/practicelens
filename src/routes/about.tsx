@@ -88,6 +88,19 @@ function AboutPage() {
             <Link to="/analyzer">Start an analysis</Link>
           </Button>
         </div>
+
+        <p className="mt-8 text-sm leading-relaxed text-muted-foreground">
+          This analyzer is a product of{" "}
+          <a
+            href="https://www.trio.tax/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-foreground underline underline-offset-4 hover:text-primary"
+          >
+            Trio Tax
+          </a>
+          , a full service tax and advisory firm serving clients throughout the United States.
+        </p>
       </main>
       <SiteFooter />
     </div>
